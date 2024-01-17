@@ -1,73 +1,120 @@
+import os
+import google.generativeai as genai
 import streamlit as st
 from PyPDF2 import PdfReader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-import pprint
-import google.generativeai as palm
-from langchain.embeddings import GooglePalmEmbeddings
-from langchain.llms import GooglePalm
-from langchain.vectorstores import FAISS
+from dotenv import load_dotenv
 from langchain.chains import ConversationalRetrievalChain
 from langchain.memory import ConversationBufferMemory
-import os
+from langchain.text_splitter import CharacterTextSplitter
+from langchain_community.vectorstores import FAISS
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_community.chat_models import ChatGooglePalm
+from htmlTemplates import css, bot_template, user_template
 
-os.environ['GOOGLE_API_KEY'] =  'AIzaSyA6QdTgid6CkbOEai4zMIip6OdQKlEXF6o'
+load_dotenv()
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+
 
 def get_pdf_text(pdf_docs):
-    text=""
+    text = ""
     for pdf in pdf_docs:
-        pdf_reader= PdfReader(pdf)
+        pdf_reader = PdfReader(pdf)
         for page in pdf_reader.pages:
-            text+= page.extract_text()
-    return  text
+            text += page.extract_text()
+    return text
+
 
 def get_text_chunks(text):
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=20)
+    text_splitter = CharacterTextSplitter(
+        chunk_size=1000,
+        chunk_overlap=200,
+        length_function=len
+    )
     chunks = text_splitter.split_text(text)
     return chunks
 
-def get_vector_store(text_chunks):
-    embeddings = GooglePalmEmbeddings()
-    vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
-    return vector_store
 
-def get_conversational_chain(vector_store):
-    llm=GooglePalm()
-    memory = ConversationBufferMemory(memory_key = "chat_history", return_messages=True)
-    conversation_chain = ConversationalRetrievalChain.from_llm(llm=llm, retriever=vector_store.as_retriever(), memory=memory)
+def get_vector_store(text_chunks):
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    vectorstore = FAISS.from_texts(text_chunks, embeddings)
+    return vectorstore
+
+
+def get_conversational_chain(vectorstore):
+    # llm_model = ChatGoogleGenerativeAI(model="gemini-pro",temperature=0.3)
+    llm_model = ChatGooglePalm()
+
+    memory = ConversationBufferMemory(
+        memory_key='chat_history', return_messages=True)
+    conversation_chain = ConversationalRetrievalChain.from_llm(
+        llm=llm_model,
+        verbose=True,
+        retriever=vectorstore.as_retriever(),
+        memory=memory
+    )
     return conversation_chain
 
-def user_input(user_question):
+
+def handle_userinput(user_question):
     response = st.session_state.conversation({'question': user_question})
-    st.session_state.chatHistory = response['chat_history']
-    for i, message in enumerate(st.session_state.chatHistory):
-        if i%2 == 0:
-            st.write("Human: ", message.content)
+    st.session_state.chat_history = response['chat_history']
+
+    for i, message in enumerate(st.session_state.chat_history):
+        if i % 2 == 0:
+            st.write(user_template.replace(
+                "{{MSG}}", message.content), unsafe_allow_html=True)
         else:
-            st.write("Bot: ", message.content)
+            st.write(bot_template.replace(
+                "{{MSG}}", message.content), unsafe_allow_html=True)
+
 
 def main():
-    st.set_page_config("Chat with PDFs")
-    st.header("Chat with  PDF 💬")
-    user_question = st.text_input("Ask a Question from the PDF Files")
+    load_dotenv()
+    styl = f"""
+    <style>
+        .stTextInput {{
+          position: fixed;
+          bottom: 0rem;
+          padding-bottom: 30px;
+          padding-top: 20px;
+          background-color: #0E1117;
+          z-index: 100;
+        }}
+    </style>
+    """
+    st.markdown(styl, unsafe_allow_html=True)
+
+    st.write(css, unsafe_allow_html=True)
+    user_question = st.text_input("Ask a question about your documents:")
+
     if "conversation" not in st.session_state:
         st.session_state.conversation = None
-    if "chatHistory" not in st.session_state:
-        st.session_state.chatHistory = None
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = None
+
     if user_question:
-        user_input(user_question)
+        handle_userinput(user_question)
+
     with st.sidebar:
-        st.title("Settings")
-        st.subheader("Upload your Documents")
-        pdf_docs = st.file_uploader("Upload your PDF Files and Click on the Process Button", accept_multiple_files=True)
+        st.subheader("Your documents")
+        pdf_docs = st.file_uploader(
+            "Upload your PDFs here and click on 'Process'", accept_multiple_files=True)
         if st.button("Process"):
             with st.spinner("Processing"):
+                # get pdf text
                 raw_text = get_pdf_text(pdf_docs)
+
+                # get the text chunks
                 text_chunks = get_text_chunks(raw_text)
-                vector_store = get_vector_store(text_chunks)
-                st.session_state.conversation = get_conversational_chain(vector_store)
-                st.success("Done")
+
+                # create vector store
+                vectorstore = get_vector_store(text_chunks)
+
+                # create conversation chain
+                st.session_state.conversation = get_conversational_chain(
+                    vectorstore)
 
 
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
