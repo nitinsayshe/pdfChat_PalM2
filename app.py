@@ -1,17 +1,14 @@
+import os
+import google.generativeai as genai
 import streamlit as st
 from PyPDF2 import PdfReader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-import pprint
-import google.generativeai as genai
 from dotenv import load_dotenv
-import google.generativeai as palm
-from langchain.embeddings import GooglePalmEmbeddings
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
-from langchain.llms import GooglePalm
-from langchain.vectorstores import FAISS
 from langchain.chains import ConversationalRetrievalChain
+from langchain.llms import GooglePalm
 from langchain.memory import ConversationBufferMemory
-import os
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.vectorstores import FAISS
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 load_dotenv()
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
