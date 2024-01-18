@@ -26,7 +26,7 @@ def get_pdf_text(pdf_docs):
 
 
 def get_text_chunks(text):
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=20)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1500, chunk_overlap=200)
     chunks = text_splitter.split_text(text)
     return chunks
 
@@ -58,14 +58,16 @@ def user_input(user_question):
     st.session_state.chatHistory = response['chat_history']
     for i, message in enumerate(st.session_state.chatHistory):
         if i % 2 == 0:
-            st.write("Human : ", message.content)
+            with st.chat_message("user"):
+                st.write(message.content)
         else:
-            st.write("Bot : ", message.content)
+            with st.chat_message("assistant"):
+                st.write(message.content)
 
 
 def main():
     st.set_page_config("wizzo demo3")
-    user_question = st.text_input("Ask a Question from the PDF Files")
+    user_question = st.chat_input("Ask a Question from the PDF Files")
     if "conversation" not in st.session_state:
         st.session_state.conversation = None
     if "chatHistory" not in st.session_state:
