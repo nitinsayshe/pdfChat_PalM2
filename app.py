@@ -8,7 +8,9 @@ from langchain.llms import GooglePalm
 from langchain.memory import ConversationBufferMemory
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import FAISS
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
+# from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain.embeddings import GooglePalmEmbeddings
+
 
 load_dotenv()
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
@@ -30,9 +32,9 @@ def get_text_chunks(text):
 
 
 def get_vector_store(text_chunks):
-    # embeddings = GooglePalmEmbeddings()
+    embeddings = GooglePalmEmbeddings()
 
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    # embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
     vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
     vector_store.save_local("faiss_index")
     # return vector_store
@@ -41,7 +43,8 @@ def get_vector_store(text_chunks):
 def get_conversational_chain():
     llm = GooglePalm()
     memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    # embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    embeddings = GooglePalmEmbeddings()
     new_db = FAISS.load_local("faiss_index",embeddings)
     conversation_chain = ConversationalRetrievalChain.from_llm(
         llm=llm,
