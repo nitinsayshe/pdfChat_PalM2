@@ -100,7 +100,7 @@ def main():
         st.subheader("Your documents")
         pdf_docs = st.file_uploader(
             "Upload your PDFs here and click on 'Process'", accept_multiple_files=True)
-        if st.button("Process"):
+        if pdf_docs :
             with st.spinner("Processing"):
                 # get pdf text
                 raw_text = get_pdf_text(pdf_docs)
@@ -114,6 +114,7 @@ def main():
                 # create conversation chain
                 st.session_state.conversation = get_conversational_chain(
                     vectorstore)
+                st.success("Done")
 
 
 if __name__ == '__main__':
