@@ -11,7 +11,6 @@ from langchain.vectorstores import FAISS
 # from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain.embeddings import GooglePalmEmbeddings
 
-
 load_dotenv()
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
@@ -25,8 +24,8 @@ def get_pdf_text(pdf_docs):
     return text
 
 
-def get_text_chunks(text):
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1500, chunk_overlap=200)
+def get_text_chunks(text, chunk_size):
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=200)
     chunks = text_splitter.split_text(text)
     return chunks
 
@@ -45,7 +44,7 @@ def get_conversational_chain():
     memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
     # embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
     embeddings = GooglePalmEmbeddings()
-    new_db = FAISS.load_local("faiss_index",embeddings)
+    new_db = FAISS.load_local("faiss_index", embeddings)
     conversation_chain = ConversationalRetrievalChain.from_llm(
         llm=llm,
         retriever=new_db.as_retriever(),
@@ -68,6 +67,7 @@ def user_input(user_question):
 def main():
     st.set_page_config("wizzo demo3")
     user_question = st.chat_input("Ask a Question from the PDF Files")
+
     if "conversation" not in st.session_state:
         st.session_state.conversation = None
     if "chatHistory" not in st.session_state:
@@ -91,10 +91,11 @@ def main():
         st.title("Settings")
         st.subheader("Upload your Documents")
         pdf_docs = st.file_uploader("Upload your PDF Files and Click on the Process Button", accept_multiple_files=True)
+        chunk_size = st.slider('set the chunk size', 200, 2000, 500)
         if st.button("Process"):
             with st.spinner("Processing"):
                 raw_text = get_pdf_text(pdf_docs)
-                text_chunks = get_text_chunks(raw_text)
+                text_chunks = get_text_chunks(raw_text, chunk_size)
                 get_vector_store(text_chunks)
                 st.session_state.conversation = get_conversational_chain()
                 st.success("Done")
