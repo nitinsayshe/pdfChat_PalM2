@@ -65,9 +65,9 @@ def user_input(user_question):
 
 
 def main():
-    st.set_page_config("wizzo demo3")
+    st.set_page_config("wizzo")
+    st.image("assets/logo.png",width=140,clamp=True)
     user_question = st.chat_input("Ask a Question from the PDF Files")
-
     if "conversation" not in st.session_state:
         st.session_state.conversation = None
     if "chatHistory" not in st.session_state:
@@ -78,8 +78,8 @@ def main():
             position: fixed;
             bottom: 0rem;
             padding-bottom: 30px;
-            padding-top: 20px;  
-            background-color: #0E1117;
+            padding-top: 20px;
+
             z-index: 100;
           }}
       </style>
@@ -92,13 +92,16 @@ def main():
         st.subheader("Upload your Documents")
         pdf_docs = st.file_uploader("Upload your PDF Files and Click on the Process Button", accept_multiple_files=True)
         chunk_size = st.slider('set the chunk size', 200, 2000, 500)
-        if st.button("Process"):
+        if st.button("Process",disabled=not pdf_docs ):
             with st.spinner("Processing"):
                 raw_text = get_pdf_text(pdf_docs)
                 text_chunks = get_text_chunks(raw_text, chunk_size)
                 get_vector_store(text_chunks)
                 st.session_state.conversation = get_conversational_chain()
                 st.success("Done")
+
+
+
 
 
 if __name__ == "__main__":
